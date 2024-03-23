@@ -1,28 +1,72 @@
+import pandas as pd
 from fastapi import FastAPI
 
-from pydantic import BaseModel
-import numpy as np
-import joblib
-from keras.models import load_model
-from sklearn.discriminant_analysis import StandardScaler
-
-from backend.schemas import PredictionData
+from backend.schemas import TrainResult
+from data_process import preprocess_data
+from neuralwebs.BERT.weather_model import build_transformer_model
+from neuralwebs.D_CNN.weather_model import build_model as build_1d_cnn_model
+from neuralwebs.FCNN.weather_model import build_model as build_fcnn_model
+from train import train_model_async
 
 app = FastAPI()
 
-# Загрузка обученной модели и scaler
-model = load_model("data/weather_model.keras")
-scaler: StandardScaler = joblib.load("data/scaler.gz")
 
-class PredictionData(BaseModel):
-    data: list[list[float]]  # Ожидаем данные в виде списка списков (признаки для предсказаний)
+def load_data(filepath):
+    data = pd.read_csv(filepath)
+    data["DATE"] = pd.to_datetime(data["DATE"])
+    data["YEAR"] = data["DATE"].dt.year
+    data["MONTH"] = data["DATE"].dt.month
+    data["DAY"] = data["DATE"].dt.day
+    return data
 
-@app.post("/predict")
-async def make_prediction(data: PredictionData):
-    input_data = np.array(data.data)  # Преобразование в numpy массив
-    scaled_input = scaler.transform(input_data)  # Масштабирование данных
-    
-    predictions = model.predict(scaled_input)  # Предсказание
-    predictions_binary = [1 if x > 0.5 else 0 for x in predictions.flatten()]  # Преобразование в бинарные значения
-    print(scaled_input, predictions, input_data, scaled_input)
-    return {"prediction": predictions_binary}  # Возврат предсказаний
+
+@app.post("/train_fcnn/", response_model=TrainResult)
+async def train_fcnn():
+    data = load_data("./data/seattle_weather_1948-2017.csv")
+    X_train, y_train = preprocess_data(data)
+    fcnn_model = build_fcnn_model(X_train[0].shape)
+    history = await train_model_async(fcnn_model, X_train, y_train, epochs=10)
+    return TrainResult(
+        loss=history.history["val_loss"][-1], mae=history.history["val_mae"][-1]
+    )
+
+
+@app.post("/train_1d_cnn/", response_model=TrainResult)
+async def train_1d_cnn():
+    data = load_data("./data/seattle_weather_1948-2017.csv")
+    X_train, y_train = preprocess_data(data)
+    cnn_model = build_1d_cnn_model(X_train[0].shape)
+    history = await train_model_async(cnn_model, X_train, y_train, epochs=10)
+    return TrainResult(
+        loss=history.history["val_loss"][-1], mae=history.history["val_mae"][-1]
+    )
+
+
+@app.post("/train_transformer/", response_model=TrainResult)
+async def train_transformer():
+    data = load_data("./data/seattle_weather_1948-2017.csv")
+    X_train, y_train = preprocess_data(data)
+    transformer_model = build_transformer_model(
+        sequence_length=X_train.shape[1],  # Количество временных шагов
+        num_features=X_train.shape[2],  # Количество признаков на каждом временном шаге
+        d_model=128,  # Глубина модели
+        num_heads=8,  # Количество голов внимания
+        num_layers=4,  # Количество слоев трансформера
+        dff=512,  # Размерность скрытого слоя внутренних полносвязных слоев
+        rate=0.1,  # Процент дропаута
+    )
+    history = await train_model_async(transformer_model, X_train, y_train, epochs=10)
+    return TrainResult(
+        loss=history.history["val_loss"][-1], mae=history.history["val_mae"][-1]
+    )
+
+
+@app.get("/dataset_info/")
+async def get_dataset_info():
+    data = pd.read_csv("./data/seattle_weather_1948-2017.csv")
+    info = {
+        "number_of_records": len(data),
+        "number_of_columns": len(data.columns),
+        "columns": data.columns.tolist(),
+    }
+    return info

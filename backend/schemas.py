@@ -1,5 +1,6 @@
-from datetime import date
 from pydantic import BaseModel
 
-class PredictionData(BaseModel):
-    query_date: date
+
+class TrainResult(BaseModel):
+    loss: float
+    mae: float
