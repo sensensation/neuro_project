@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuralWebs Model Comparison</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>NeuralWebs Compare Analysis</h1>
+        <div class="models">
+            <button id="fcnn" onclick="trainModel('fcnn')">FCNN</button>
+            <button id="1d_cnn" onclick="trainModel('1d_cnn')">1D_CNN</button>
+            <button id="bert" onclick="trainModel('bert')">BERT</button>
+        </div>
+        <div class="results">
+            <h2>Results:</h2>
+            <!-- Results will be displayed here after training -->
+            <div id="results-display"></div>
+        </div>
+    </div>
+<script src="script.js"></script>
+<div class="footer-text">
+    Red button means calculating, please wait for results<br>
+    Author: Kirill Rodionov, 2024
+</div>
+</body>
+</html>

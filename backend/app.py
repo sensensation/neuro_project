@@ -1,5 +1,6 @@
 import pandas as pd
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from backend.schemas import TrainResult
 from data_process import preprocess_data
@@ -9,6 +10,13 @@ from neuralwebs.FCNN.weather_model import build_model as build_fcnn_model
 from train import train_model_async
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 
 def load_data(filepath):
@@ -42,7 +50,7 @@ async def train_1d_cnn():
     )
 
 
-@app.post("/train_transformer/", response_model=TrainResult)
+@app.post("/train_bert/", response_model=TrainResult)
 async def train_transformer():
     data = load_data("./data/seattle_weather_1948-2017.csv")
     X_train, y_train = preprocess_data(data)

@@ -2,8 +2,14 @@ import numpy as np
 import tensorflow as tf
 from keras import Input, Model, Sequential
 from keras import backend as K
-from keras.layers import (Dense, Dropout, Flatten, Layer, LayerNormalization,
-                          MultiHeadAttention)
+from keras.layers import (
+    Dense,
+    Dropout,
+    Flatten,
+    Layer,
+    LayerNormalization,
+    MultiHeadAttention,
+)
 from keras.optimizers import Adam
 
 
