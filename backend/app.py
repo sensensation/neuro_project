@@ -1,6 +1,7 @@
 import pandas as pd
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Request
 
 from backend.schemas import TrainResult
 from data_process import preprocess_data
@@ -21,6 +22,7 @@ app.add_middleware(
 
 def load_data(filepath):
     data = pd.read_csv(filepath)
+
     data["DATE"] = pd.to_datetime(data["DATE"])
     data["YEAR"] = data["DATE"].dt.year
     data["MONTH"] = data["DATE"].dt.month
@@ -31,20 +33,20 @@ def load_data(filepath):
 @app.post("/train_fcnn/", response_model=TrainResult)
 async def train_fcnn():
     data = load_data("./data/seattle_weather_1948-2017.csv")
-    X_train, y_train = preprocess_data(data)
+    X_train, X_test, y_train, y_test = preprocess_data(data)
     fcnn_model = build_fcnn_model(X_train[0].shape)
-    history = await train_model_async(fcnn_model, X_train, y_train, epochs=10)
+    history = await train_model_async(fcnn_model, X_test, y_test, epochs=15)
     return TrainResult(
         loss=history.history["val_loss"][-1], mae=history.history["val_mae"][-1]
     )
 
 
 @app.post("/train_1d_cnn/", response_model=TrainResult)
-async def train_1d_cnn():
+async def train_1d_cnn(request: Request):
     data = load_data("./data/seattle_weather_1948-2017.csv")
-    X_train, y_train = preprocess_data(data)
+    X_train, X_test, y_train, y_test = preprocess_data(data)
     cnn_model = build_1d_cnn_model(X_train[0].shape)
-    history = await train_model_async(cnn_model, X_train, y_train, epochs=10)
+    history = await train_model_async(cnn_model, X_train, y_train, epochs=15)
     return TrainResult(
         loss=history.history["val_loss"][-1], mae=history.history["val_mae"][-1]
     )
@@ -53,7 +55,7 @@ async def train_1d_cnn():
 @app.post("/train_bert/", response_model=TrainResult)
 async def train_transformer():
     data = load_data("./data/seattle_weather_1948-2017.csv")
-    X_train, y_train = preprocess_data(data)
+    X_train, X_test, y_train, y_test = preprocess_data(data)
     transformer_model = build_transformer_model(
         sequence_length=X_train.shape[1],  # Количество временных шагов
         num_features=X_train.shape[2],  # Количество признаков на каждом временном шаге
@@ -63,7 +65,7 @@ async def train_transformer():
         dff=512,  # Размерность скрытого слоя внутренних полносвязных слоев
         rate=0.1,  # Процент дропаута
     )
-    history = await train_model_async(transformer_model, X_train, y_train, epochs=10)
+    history = await train_model_async(transformer_model, X_test, y_test, epochs=15)
     return TrainResult(
         loss=history.history["val_loss"][-1], mae=history.history["val_mae"][-1]
     )

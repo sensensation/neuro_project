@@ -20,6 +20,14 @@
 
 Для работы с проектом необходимо выполнить следующие шаги:
 
+1. Создать виртуальное окружние и активировать его
+
+python -m venv venv 
+
+source vevnv/bin/activate для MacOS
+
+.\venv\Scripts\activate - для Windows
+
 1. Установить зависимости:
 
 pip install -r requirements.txt

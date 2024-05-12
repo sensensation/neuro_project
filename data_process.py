@@ -35,13 +35,14 @@ def preprocess_data(data, sequence_length=7):
     features = ["PRCP", "TMIN", "YEAR", "MONTH", "DAY"]
     X = data[features]
     y = data["TMAX"]
+    X.fillna(X.mean(), inplace=True)
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     X_seq, y_seq = create_sequences(X_scaled, y, sequence_length)
     X_train, X_test, y_train, y_test = train_test_split(
         X_seq, y_seq, test_size=0.2, random_state=42
     )
-    return X_train, y_train
+    return X_train, X_test, y_train, y_test
 
 
 def create_sequences(input_data, output_data, sequence_length):
